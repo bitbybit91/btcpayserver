@@ -174,13 +174,22 @@ class PaymentMonitor:
             order: Order dict.
 
         Returns:
-            True if the transaction is confirmed and outputs match.
+            True if the transaction is confirmed with sufficient depth.
         """
         status = data.get("status", {})
         if not status.get("confirmed"):
             return False
 
-        confirmations = status.get("block_height", 0)
+        # Blockstream returns the block_height of the transaction.
+        # We use the current chain tip from a separate request to compute
+        # real confirmation depth.  As a safe fallback (when the tip cannot
+        # be fetched), treat any confirmed transaction as having at least 1
+        # confirmation.
+        tx_block_height = status.get("block_height")
+        if tx_block_height is None:
+            return False
+
+        confirmations = self._fetch_confirmation_depth(tx_block_height)
         if confirmations < self._confirmations_required:
             return False
 
@@ -189,6 +198,32 @@ class PaymentMonitor:
                 return True
 
         return False
+
+    def _fetch_confirmation_depth(self, tx_block_height: int) -> int:
+        """Return the number of confirmations for a transaction.
+
+        Fetches the current chain tip height from Blockstream and subtracts
+        the transaction's block height.  Returns 1 on any error so that
+        already-confirmed transactions are not blocked indefinitely.
+
+        Args:
+            tx_block_height: The block height at which the transaction was mined.
+
+        Returns:
+            Number of confirmations (≥ 1 if confirmed).
+        """
+        try:
+            resp = requests.get(
+                "https://blockstream.info/api/blocks/tip/height",
+                timeout=10,
+            )
+            resp.raise_for_status()
+            tip = int(resp.text.strip())
+            return max(1, tip - tx_block_height + 1)
+        except Exception as exc:
+            log.warning(f"Could not fetch chain tip height: {exc}")
+            # Treat as 1 confirmation if we cannot determine the tip
+            return 1
 
     def _parse_blockchair(
         self,

@@ -93,20 +93,31 @@ class Database:
     # Order helpers
     # ------------------------------------------------------------------
 
+    # Allowlisted columns for create_order and update_order
+    _ORDER_COLUMNS = frozenset({
+        "order_id", "expires_at", "status", "product_name", "product_id",
+        "fiat_amount", "fiat_currency", "crypto_currency", "crypto_amount",
+        "crypto_amount_received", "wallet_address", "exchange_rate", "tx_hash",
+        "confirmations", "verified_at", "customer_email", "customer_ip",
+        "customer_note", "site_name", "page_url",
+    })
+
     def create_order(self, data: Dict[str, Any]) -> int:
         """Insert a new order record.
 
         Args:
-            data: Mapping of column names to values.
+            data: Mapping of column names to values.  Only allowlisted column
+                names are accepted; unknown keys are silently dropped.
 
         Returns:
             The ``rowid`` of the newly inserted row.
         """
-        columns = ", ".join(data.keys())
-        placeholders = ", ".join("?" * len(data))
+        safe_data = {k: v for k, v in data.items() if k in self._ORDER_COLUMNS}
+        columns = ", ".join(safe_data.keys())
+        placeholders = ", ".join("?" * len(safe_data))
         sql = f"INSERT INTO orders ({columns}) VALUES ({placeholders})"  # noqa: S608
         with self._cursor() as cur:
-            cur.execute(sql, list(data.values()))
+            cur.execute(sql, list(safe_data.values()))
             return cur.lastrowid  # type: ignore[return-value]
 
     def get_order(self, order_id: str) -> Optional[Dict[str, Any]]:
@@ -129,14 +140,18 @@ class Database:
 
         Args:
             order_id: The UUID-style order identifier.
-            data: Mapping of column names to new values.
+            data: Mapping of column names to new values.  Only allowlisted
+                column names are accepted.
 
         Returns:
             Number of rows affected.
         """
-        set_clause = ", ".join(f"{col} = ?" for col in data.keys())
+        safe_data = {k: v for k, v in data.items() if k in self._ORDER_COLUMNS}
+        if not safe_data:
+            return 0
+        set_clause = ", ".join(f"{col} = ?" for col in safe_data.keys())
         sql = f"UPDATE orders SET {set_clause}, updated_at = CURRENT_TIMESTAMP WHERE order_id = ?"  # noqa: S608
-        values = list(data.values()) + [order_id]
+        values = list(safe_data.values()) + [order_id]
         with self._cursor() as cur:
             cur.execute(sql, values)
             return cur.rowcount

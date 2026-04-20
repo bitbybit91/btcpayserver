@@ -4,6 +4,7 @@ import os
 import sys
 import functools
 import html
+import re
 from typing import Any, Callable, Dict, Optional, Tuple
 
 from flask import Flask, jsonify, request, abort, Response, send_file
@@ -127,7 +128,11 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
     # ------------------------------------------------------------------
 
     def _sanitise(value: str) -> str:
-        """HTML-escape a user-supplied string to prevent XSS.
+        """HTML-escape a user-supplied string to prevent XSS in HTML contexts.
+
+        Use this only for values that will be rendered in HTML responses.
+        For API query parameters (tickers, codes), use ``_validate_token``
+        instead.
 
         Args:
             value: Raw user input.
@@ -136,6 +141,22 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
             HTML-escaped string.
         """
         return html.escape(str(value), quote=True)
+
+    def _validate_token(value: str, max_len: int = 50) -> str:
+        """Sanitise a short identifier token (coin ticker, currency code, etc.).
+
+        Strips whitespace, truncates to ``max_len``, and allows only
+        alphanumeric characters plus ``_/-``.
+
+        Args:
+            value: Raw user input.
+            max_len: Maximum allowed length.
+
+        Returns:
+            Cleaned token string.
+        """
+        cleaned = re.sub(r"[^A-Za-z0-9_\-/]", "", str(value).strip())
+        return cleaned[:max_len]
 
     # ------------------------------------------------------------------
     # Health
@@ -153,8 +174,8 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
     @app.route("/api/price")
     def get_price():
         """GET /api/price?coin=bitcoin&fiat=usd&amount=49.99"""
-        coin = _sanitise(request.args.get("coin", ""))
-        fiat = _sanitise(request.args.get("fiat", "usd"))
+        coin = _validate_token(request.args.get("coin", ""))
+        fiat = _validate_token(request.args.get("fiat", "usd"))
         amount_str = request.args.get("amount", "")
 
         if not coin:
@@ -183,7 +204,7 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
     @app.route("/api/prices")
     def get_prices():
         """GET /api/prices?fiat=usd"""
-        fiat = _sanitise(request.args.get("fiat", "usd"))
+        fiat = _validate_token(request.args.get("fiat", "usd"))
         all_prices = prices.get_all_prices(fiat)
         return jsonify({"fiat": fiat, "prices": all_prices})
 
@@ -209,8 +230,8 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
         if fiat_amount <= 0:
             return jsonify({"error": "fiat_amount must be positive"}), 400
 
-        fiat_currency = _sanitise(data.get("fiat_currency", "usd"))
-        crypto_currency = _sanitise(data.get("crypto_currency", ""))
+        fiat_currency = _validate_token(data.get("fiat_currency", "usd"))
+        crypto_currency = _validate_token(data.get("crypto_currency", ""))
 
         if not crypto_currency:
             return jsonify({"error": "crypto_currency required"}), 400

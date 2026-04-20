@@ -94,8 +94,8 @@ def _apply_defaults(config: Dict[str, Any]) -> Dict[str, Any]:
     """
     defaults: Dict[str, Any] = {
         "flask": {
-            "secret_key": "changeme-insecure-default",
             "debug": False,
+            # secret_key has no default — must be set via CRYPTO_PAY_SECRET_KEY env var
         },
         "server": {
             "host": "127.0.0.1",
@@ -154,8 +154,8 @@ def validate_config(config: Dict[str, Any]) -> bool:
     """
     errors: list = []
 
-    if config.get("flask", {}).get("secret_key") in ("", "changeme-insecure-default"):
-        errors.append("flask.secret_key must be set to a strong random value")
+    if not config.get("flask", {}).get("secret_key"):
+        errors.append("flask.secret_key must be set — use CRYPTO_PAY_SECRET_KEY env var")
 
     if not config.get("admin", {}).get("api_key"):
         errors.append("admin.api_key must be set")

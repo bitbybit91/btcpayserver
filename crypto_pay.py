@@ -673,9 +673,14 @@ class SiteInjector:
             api_base=self.api_base,
         )
 
-        # Insert snippet before the last </body>
-        close_body_pattern = re.compile(r"</body>", re.IGNORECASE)
-        new_content = close_body_pattern.sub(snippet + "\n</body>", content, count=1)
+        # Insert snippet before the LAST </body> tag
+        lower_content = content.lower()
+        last_body_pos = lower_content.rfind("</body>")
+        if last_body_pos == -1:
+            self._skipped.append(fpath)
+            return
+
+        new_content = content[:last_body_pos] + snippet + "\n" + content[last_body_pos:]
 
         if new_content == content:
             self._skipped.append(fpath)
