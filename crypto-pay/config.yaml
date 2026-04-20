@@ -1,0 +1,69 @@
+# crypto-pay configuration
+# Copy this file and edit values for your environment.
+# Secrets belong in .env, not here.
+
+flask:
+  debug: false
+  # secret_key loaded from CRYPTO_PAY_SECRET_KEY in .env
+
+server:
+  host: "127.0.0.1"   # Never expose directly to the internet
+  port: 5000
+
+database:
+  path: "/var/lib/crypto-pay/crypto_pay.db"
+
+admin:
+  # api_key loaded from CRYPTO_PAY_ADMIN_API_KEY in .env
+
+payment:
+  expiry_minutes: 30
+  confirmations_required: 1
+
+price_engine:
+  cache_ttl: 60           # seconds
+  stale_warn_after: 300   # seconds
+  stale_hard_limit: 900   # seconds
+  fiat_currencies:
+    - usd
+    - eur
+    - gbp
+    - cad
+    - aud
+    - aed
+    - sar
+    - jpy
+    - chf
+    - cny
+  # coingecko_api_key loaded from COINGECKO_API_KEY in .env (leave blank for free tier)
+
+cors:
+  origins:
+    - "http://127.0.0.1"
+    - "https://yourdomain.example"
+
+rate_limit:
+  per_ip_per_minute: 30
+
+webhook:
+  # secret loaded from CRYPTO_PAY_WEBHOOK_SECRET in .env
+  timeout: 10
+  retries: 3
+  # merchant_url: "https://yoursite.example/webhook/crypto"
+
+logging:
+  level: "INFO"
+  dir: "/var/log/crypto-pay"
+
+# Public wallet addresses — NO private keys
+wallets:
+  BTC: ""
+  ETH: ""
+  XMR: ""
+  LTC: ""
+  USDT_ERC20: ""
+  USDT_TRC20: ""
+  BCH: ""
+  SOL: ""
+  DOGE: ""
+  USDC: ""

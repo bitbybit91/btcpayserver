@@ -1,0 +1,23 @@
+{# inject_modal.html.j2 — Payment modal injection template
+   Include at the bottom of <body>.  Requires crypto-pay.js to be loaded.
+   Variables:
+     api_base    : URL prefix for the crypto-pay API  (default "/api")
+     css_url     : URL to payment.css                 (default "/crypto-pay/css/payment.css")
+     js_url      : URL to crypto-pay.js               (default "/crypto-pay/js/crypto-pay.js")
+#}
+{% set api_base = api_base | default('/api') %}
+{% set css_url  = css_url  | default('/crypto-pay/css/payment.css') %}
+{% set js_url   = js_url   | default('/crypto-pay/js/crypto-pay.js') %}
+
+<!-- crypto-pay: inject_modal.html.j2 -->
+<link rel="stylesheet" href="{{ css_url | e }}">
+<div id="crypto-pay-modal-mount"></div>
+<script src="{{ js_url | e }}"></script>
+<script>
+(function () {
+  'use strict';
+  if (typeof CryptoPay === 'undefined') return;
+  CryptoPay.init({ apiBase: '{{ api_base | e }}' });
+}());
+</script>
+<!-- /crypto-pay: inject_modal.html.j2 -->

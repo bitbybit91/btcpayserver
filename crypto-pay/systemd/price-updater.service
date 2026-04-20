@@ -1,0 +1,42 @@
+[Unit]
+Description=crypto-pay Price Updater Daemon
+After=network.target crypto-pay.service
+Wants=crypto-pay.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/crypto-pay/server
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/opt/crypto-pay/.env
+ExecStart=/opt/crypto-pay/venv/bin/python -c "
+import time, sys, os
+sys.path.insert(0, '/opt/crypto-pay/server')
+from config_loader import load_config
+from database import Database
+from price_engine import PriceEngine
+cfg = load_config()
+db = Database(cfg['database']['path'])
+engine = PriceEngine(
+    db=db,
+    cache_ttl=cfg['price_engine']['cache_ttl'],
+    stale_warn_after=cfg['price_engine']['stale_warn_after'],
+    stale_hard_limit=cfg['price_engine']['stale_hard_limit'],
+    api_key=cfg['price_engine']['coingecko_api_key'],
+)
+while True:
+    for fiat in cfg['price_engine']['fiat_currencies']:
+        engine.get_all_prices(fiat)
+    time.sleep(cfg['price_engine']['cache_ttl'])
+"
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=crypto-pay-prices
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
