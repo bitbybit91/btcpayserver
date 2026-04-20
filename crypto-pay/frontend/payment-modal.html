@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cryptocurrency Payment</title>
+  <link rel="stylesheet" href="css/payment.css">
+</head>
+<body>
+<!--
+  payment-modal.html — Embeddable modal overlay
+  Include this file at the bottom of your page and load crypto-pay.js.
+  Trigger via: CryptoPay.openModal({ fiat_amount: 49.99, fiat_currency: 'usd', crypto_currency: 'BTC' });
+-->
+
+<!-- Trigger button example (replace with your own button) -->
+<button class="crypto-pay-trigger-btn" id="cp-open-modal-btn">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm.88 14.76V18h-1.75v-1.29c-1.43-.3-2.63-1.2-2.7-2.75h1.84c.06.82.63 1.45 1.87 1.45 1.33 0 1.62-.67 1.62-1.08 0-.57-.29-1.07-1.72-1.42-1.6-.41-2.7-1.1-2.7-2.49 0-1.16.93-1.92 2.09-2.17V7h1.75v1.29c1.52.37 2.28 1.42 2.32 2.7h-1.84c-.04-.88-.48-1.49-1.57-1.49-1.04 0-1.66.5-1.66 1.17 0 .63.47 1.03 1.85 1.39 1.38.36 2.57.94 2.57 2.54 0 1.2-.84 1.96-2.17 2.16z"/>
+  </svg>
+  Pay with Crypto
+</button>
+
+<script src="js/crypto-pay.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* Configuration — adjust for your integration */
+  CryptoPay.init({ apiBase: '/api' });
+
+  var btn = document.getElementById('cp-open-modal-btn');
+  if (btn) {
+    btn.addEventListener('click', function () {
+      CryptoPay.openModal({
+        fiat_amount:     49.99,
+        fiat_currency:   'usd',
+        crypto_currency: 'BTC',
+        product_name:    'Example Product',
+      });
+    });
+  }
+
+  CryptoPay.onStatusChange(function (orderId, status) {
+    if (status === 'completed') {
+      console.log('[CryptoPay] Payment confirmed for order:', orderId);
+      /* Redirect, update UI, etc. */
+    }
+  });
+}());
+</script>
+</body>
+</html>

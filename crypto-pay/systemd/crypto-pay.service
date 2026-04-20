@@ -1,0 +1,25 @@
+[Unit]
+Description=crypto-pay Flask Payment Server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/crypto-pay/server
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/opt/crypto-pay/.env
+ExecStart=/opt/crypto-pay/venv/bin/python app.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=crypto-pay
+# Security hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/crypto-pay /var/log/crypto-pay
+
+[Install]
+WantedBy=multi-user.target

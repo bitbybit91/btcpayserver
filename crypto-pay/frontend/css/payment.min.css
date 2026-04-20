@@ -1,0 +1,438 @@
+/* crypto-pay payment UI styles
+ * All classes are prefixed with .crypto-pay- to avoid conflicts.
+ * Supports light and dark mode via prefers-color-scheme.
+ */
+
+/* -------------------------------------------------------------------------
+ * CSS custom properties (tokens)
+ * ---------------------------------------------------------------------- */
+:root {
+  --cp-primary:        #f7931a;   /* Bitcoin orange */
+  --cp-primary-dark:   #d4790f;
+  --cp-success:        #27ae60;
+  --cp-danger:         #e74c3c;
+  --cp-warning:        #f39c12;
+  --cp-bg:             #ffffff;
+  --cp-bg-secondary:   #f8f9fa;
+  --cp-border:         #dee2e6;
+  --cp-text:           #212529;
+  --cp-text-muted:     #6c757d;
+  --cp-radius:         8px;
+  --cp-shadow:         0 4px 24px rgba(0,0,0,0.12);
+  --cp-font:           -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --cp-transition:     0.2s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cp-bg:           #1a1a2e;
+    --cp-bg-secondary: #16213e;
+    --cp-border:       #2d3748;
+    --cp-text:         #e2e8f0;
+    --cp-text-muted:   #a0aec0;
+    --cp-shadow:       0 4px 24px rgba(0,0,0,0.5);
+  }
+}
+
+/* -------------------------------------------------------------------------
+ * Layout
+ * ---------------------------------------------------------------------- */
+.crypto-pay-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 9998;
+  align-items: center;
+  justify-content: center;
+}
+
+.crypto-pay-overlay.crypto-pay-active {
+  display: flex;
+}
+
+.crypto-pay-modal {
+  background: var(--cp-bg);
+  border-radius: var(--cp-radius);
+  box-shadow: var(--cp-shadow);
+  max-width: 480px;
+  width: 100%;
+  margin: 16px;
+  font-family: var(--cp-font);
+  color: var(--cp-text);
+  position: relative;
+  z-index: 9999;
+}
+
+.crypto-pay-widget {
+  background: var(--cp-bg);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius);
+  box-shadow: var(--cp-shadow);
+  max-width: 480px;
+  width: 100%;
+  font-family: var(--cp-font);
+  color: var(--cp-text);
+}
+
+.crypto-pay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--cp-border);
+}
+
+.crypto-pay-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.crypto-pay-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--cp-text-muted);
+  padding: 4px;
+  border-radius: 4px;
+  line-height: 1;
+  font-size: 1.2rem;
+  transition: color var(--cp-transition);
+}
+
+.crypto-pay-close-btn:hover {
+  color: var(--cp-text);
+}
+
+.crypto-pay-body {
+  padding: 24px;
+}
+
+/* -------------------------------------------------------------------------
+ * Coin selector
+ * ---------------------------------------------------------------------- */
+.crypto-pay-coin-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.crypto-pay-coin-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  background: var(--cp-bg-secondary);
+  border: 2px solid var(--cp-border);
+  border-radius: var(--cp-radius);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-family: var(--cp-font);
+  color: var(--cp-text);
+  transition: border-color var(--cp-transition), background var(--cp-transition);
+}
+
+.crypto-pay-coin-btn:hover {
+  border-color: var(--cp-primary);
+}
+
+.crypto-pay-coin-btn.crypto-pay-selected {
+  border-color: var(--cp-primary);
+  background: rgba(247,147,26,0.1);
+}
+
+.crypto-pay-coin-btn img,
+.crypto-pay-coin-btn svg {
+  width: 28px;
+  height: 28px;
+}
+
+/* -------------------------------------------------------------------------
+ * Amount display
+ * ---------------------------------------------------------------------- */
+.crypto-pay-amount-box {
+  background: var(--cp-bg-secondary);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius);
+  padding: 16px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.crypto-pay-amount-fiat {
+  font-size: 0.85rem;
+  color: var(--cp-text-muted);
+  margin-bottom: 4px;
+}
+
+.crypto-pay-amount-crypto {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--cp-primary);
+  word-break: break-all;
+}
+
+.crypto-pay-amount-ticker {
+  font-size: 1rem;
+  font-weight: 400;
+  margin-left: 4px;
+  color: var(--cp-text-muted);
+}
+
+/* -------------------------------------------------------------------------
+ * QR code section
+ * ---------------------------------------------------------------------- */
+.crypto-pay-qr-section {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.crypto-pay-qr-section img {
+  width: 200px;
+  height: 200px;
+  border: 8px solid var(--cp-bg);
+  box-shadow: 0 0 0 1px var(--cp-border);
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* -------------------------------------------------------------------------
+ * Address display
+ * ---------------------------------------------------------------------- */
+.crypto-pay-address-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--cp-bg-secondary);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.crypto-pay-address-text {
+  flex: 1;
+  font-family: monospace;
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--cp-text);
+}
+
+.crypto-pay-copy-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--cp-primary);
+  padding: 4px;
+  border-radius: 4px;
+  transition: opacity var(--cp-transition);
+}
+
+.crypto-pay-copy-btn:hover { opacity: 0.7; }
+
+.crypto-pay-copy-toast {
+  font-size: 0.75rem;
+  color: var(--cp-success);
+  margin-top: -12px;
+  margin-bottom: 8px;
+  text-align: center;
+  min-height: 18px;
+}
+
+/* -------------------------------------------------------------------------
+ * Countdown timer
+ * ---------------------------------------------------------------------- */
+.crypto-pay-timer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--cp-text-muted);
+  margin-bottom: 16px;
+}
+
+.crypto-pay-timer.crypto-pay-timer-warning {
+  color: var(--cp-warning);
+}
+
+.crypto-pay-timer.crypto-pay-timer-expired {
+  color: var(--cp-danger);
+}
+
+.crypto-pay-timer-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------------------------------------------------
+ * Status messages
+ * ---------------------------------------------------------------------- */
+.crypto-pay-status {
+  text-align: center;
+  padding: 12px;
+  border-radius: var(--cp-radius);
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+.crypto-pay-status-pending   { background: rgba(243,156,18,0.12); color: var(--cp-warning); }
+.crypto-pay-status-awaiting  { background: rgba(52,152,219,0.12); color: #3498db; }
+.crypto-pay-status-completed { background: rgba(39,174,96,0.12); color: var(--cp-success); }
+.crypto-pay-status-expired   { background: rgba(231,76,60,0.12); color: var(--cp-danger); }
+.crypto-pay-status-cancelled { background: rgba(108,117,125,0.12); color: var(--cp-text-muted); }
+
+/* -------------------------------------------------------------------------
+ * TX hash input
+ * ---------------------------------------------------------------------- */
+.crypto-pay-tx-section {
+  margin-bottom: 16px;
+}
+
+.crypto-pay-tx-section label {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+  color: var(--cp-text-muted);
+}
+
+.crypto-pay-tx-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  background: var(--cp-bg-secondary);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius);
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--cp-text);
+  transition: border-color var(--cp-transition);
+}
+
+.crypto-pay-tx-input:focus {
+  outline: none;
+  border-color: var(--cp-primary);
+}
+
+/* -------------------------------------------------------------------------
+ * Primary action button
+ * ---------------------------------------------------------------------- */
+.crypto-pay-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 20px;
+  background: var(--cp-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--cp-radius);
+  font-family: var(--cp-font);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--cp-transition), transform var(--cp-transition);
+}
+
+.crypto-pay-btn:hover:not(:disabled) {
+  background: var(--cp-primary-dark);
+  transform: translateY(-1px);
+}
+
+.crypto-pay-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.crypto-pay-btn-secondary {
+  background: transparent;
+  color: var(--cp-primary);
+  border: 2px solid var(--cp-primary);
+  margin-top: 8px;
+}
+
+.crypto-pay-btn-secondary:hover:not(:disabled) {
+  background: rgba(247,147,26,0.08);
+}
+
+/* -------------------------------------------------------------------------
+ * Loading spinner
+ * ---------------------------------------------------------------------- */
+.crypto-pay-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(247,147,26,0.3);
+  border-top-color: var(--cp-primary);
+  border-radius: 50%;
+  animation: crypto-pay-spin 0.8s linear infinite;
+}
+
+@keyframes crypto-pay-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* -------------------------------------------------------------------------
+ * Footer
+ * ---------------------------------------------------------------------- */
+.crypto-pay-footer {
+  padding: 12px 24px 16px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--cp-text-muted);
+  border-top: 1px solid var(--cp-border);
+}
+
+/* -------------------------------------------------------------------------
+ * Trigger button (injected into merchant pages)
+ * ---------------------------------------------------------------------- */
+.crypto-pay-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--cp-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--cp-radius);
+  font-family: var(--cp-font);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--cp-transition);
+}
+
+.crypto-pay-trigger-btn:hover {
+  background: var(--cp-primary-dark);
+}
+
+/* -------------------------------------------------------------------------
+ * Responsive tweaks
+ * ---------------------------------------------------------------------- */
+@media (max-width: 400px) {
+  .crypto-pay-modal,
+  .crypto-pay-widget {
+    border-radius: 0;
+    margin: 0;
+    max-width: 100%;
+  }
+
+  .crypto-pay-coin-selector {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .crypto-pay-amount-crypto {
+    font-size: 1.3rem;
+  }
+}

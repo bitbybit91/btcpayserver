@@ -1,0 +1,53 @@
+{# inject_button.html.j2 — "Pay with Crypto" button template
+   Variables:
+     api_base    : URL prefix for the crypto-pay API  (default "/api")
+     fiat_amount : Amount in fiat                     (required)
+     fiat        : Fiat currency code                 (default "USD")
+     coin        : Pre-selected coin ticker           (optional)
+     product     : Product name                       (optional)
+     widget_url  : Full URL to payment-widget.html    (default "/crypto-pay/payment-widget.html")
+     button_text : Button label                       (default "Pay with Crypto")
+     css_classes : Extra CSS classes on the button   (optional)
+#}
+{% set api_base   = api_base   | default('/api') %}
+{% set fiat_amount = fiat_amount | default('0') %}
+{% set fiat       = fiat       | default('USD') %}
+{% set coin       = coin       | default('') %}
+{% set product    = product    | default('') %}
+{% set widget_url = widget_url | default('/crypto-pay/payment-widget.html') %}
+{% set button_text = button_text | default('Pay with Crypto') %}
+
+<!-- crypto-pay: inject_button.html.j2 -->
+<button
+  type="button"
+  class="crypto-pay-trigger-btn {{ css_classes | default('') }}"
+  data-cp-amount="{{ fiat_amount | e }}"
+  data-cp-fiat="{{ fiat | e }}"
+  data-cp-coin="{{ coin | e }}"
+  data-cp-product="{{ product | e }}"
+  data-cp-api="{{ api_base | e }}"
+  onclick="(function(btn){
+    var p = {
+      api_base:       btn.dataset.cpApi,
+      fiat_amount:    parseFloat(btn.dataset.cpAmount),
+      fiat_currency:  btn.dataset.cpFiat,
+      crypto_currency: btn.dataset.cpCoin || 'BTC',
+      product_name:   btn.dataset.cpProduct
+    };
+    if(window.CryptoPay){ CryptoPay.openModal(p); }
+    else {
+      var url = '{{ widget_url | e }}?amount='+encodeURIComponent(btn.dataset.cpAmount)+
+                '&fiat='+encodeURIComponent(btn.dataset.cpFiat)+
+                '&product='+encodeURIComponent(btn.dataset.cpProduct)+
+                '&api='+encodeURIComponent(btn.dataset.cpApi);
+      window.open(url,'_blank','width=520,height=700');
+    }
+  })(this)"
+  aria-label="{{ button_text | e }}">
+  <svg width="18" height="18" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+    <circle cx="16" cy="16" r="16"/>
+    <path d="M22.6 13.9c.3-2.1-1.3-3.2-3.5-4l.7-2.8-1.7-.4-.7 2.7c-.4-.1-.9-.2-1.4-.3l.7-2.8L15 6l-.7 2.8c-.4-.1-.7-.2-1-.2v0l-2.3-.6-.4 1.8s1.3.3 1.2.3c.7.2.8.6.8 1l-.8 3.3c.1 0 .1 0 .2.1l-.2-.1-1.1 4.5c-.1.2-.3.6-.8.4.0 0-1.2-.3-1.2-.3l-.8 1.9 2.2.5c.4.1.8.2 1.2.3l-.7 2.9 1.7.4.7-2.8c.5.1 1 .3 1.5.4l-.7 2.8 1.7.4.7-2.9c2.8.5 4.9.3 5.8-2.2.7-2-.0-3.2-1.5-3.9 1.1-.2 1.9-1 2.1-2.4zm-3.8 5.3c-.5 2-3.9.9-5 .7l.9-3.5c1.1.3 4.6.9 4.1 2.8zm.5-5.4c-.5 1.8-3.3.9-4.2.7l.8-3.2c.9.2 3.8.6 3.4 2.5z" fill="#fff"/>
+  </svg>
+  {{ button_text }}
+</button>
+<!-- /crypto-pay: inject_button.html.j2 -->

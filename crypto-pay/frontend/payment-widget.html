@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pay with Cryptocurrency</title>
+  <link rel="stylesheet" href="css/payment.css">
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--cp-bg-secondary, #f8f9fa);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+  </style>
+</head>
+<body>
+
+<div class="crypto-pay-widget" id="cp-widget">
+  <!-- Coin selector -->
+  <div class="crypto-pay-header">
+    <h2>&#8383; Pay with Crypto</h2>
+  </div>
+  <div class="crypto-pay-body">
+
+    <div class="crypto-pay-coin-selector" id="cp-coin-selector" role="group" aria-label="Select coin">
+      <!-- Populated by JS -->
+    </div>
+
+    <div class="crypto-pay-amount-box" id="cp-amount-box" style="display:none">
+      <div class="crypto-pay-amount-fiat" id="cp-fiat-label"></div>
+      <div class="crypto-pay-amount-crypto">
+        <span id="cp-crypto-amount">—</span>
+        <span class="crypto-pay-amount-ticker" id="cp-crypto-ticker"></span>
+      </div>
+    </div>
+
+    <div class="crypto-pay-qr-section" id="cp-qr-section" style="display:none">
+      <img id="cp-qr-img" src="" alt="Payment QR code" width="200" height="200">
+    </div>
+
+    <div class="crypto-pay-address-row" id="cp-address-row" style="display:none">
+      <span class="crypto-pay-address-text" id="cp-address"></span>
+      <button class="crypto-pay-copy-btn" id="cp-copy-btn" aria-label="Copy address">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <rect x="9" y="9" width="13" height="13" rx="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+      </button>
+    </div>
+    <div class="crypto-pay-copy-toast" id="cp-copy-toast" aria-live="polite"></div>
+
+    <div class="crypto-pay-timer" id="cp-timer" aria-live="polite"></div>
+
+    <div class="crypto-pay-status crypto-pay-status-pending" id="cp-status" style="display:none"></div>
+
+    <form id="cp-tx-form" style="display:none" class="crypto-pay-tx-section">
+      <label for="cp-tx-input">Transaction hash (speeds up confirmation)</label>
+      <input id="cp-tx-input" class="crypto-pay-tx-input" type="text"
+             placeholder="Paste your transaction hash" autocomplete="off">
+      <button type="submit" class="crypto-pay-btn" style="margin-top:10px">Submit TX hash</button>
+    </form>
+
+    <button class="crypto-pay-btn" id="cp-pay-btn" style="display:none">
+      <span id="cp-pay-btn-label">Proceed to Pay</span>
+    </button>
+
+  </div>
+  <div class="crypto-pay-footer">Powered by crypto-pay &bull; Self-hosted &bull; No tracking</div>
+</div>
+
+<script src="js/crypto-pay.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ------------------------------------------------------------------
+   * Read configuration injected by the server or URL query params.
+   * ---------------------------------------------------------------- */
+  var params = new URLSearchParams(window.location.search);
+  var fiatAmount   = parseFloat(params.get('amount')   || '0');
+  var fiatCurrency = (params.get('fiat')    || 'USD').toUpperCase();
+  var productName  = params.get('product')  || '';
+  var siteName     = params.get('site')     || '';
+  var pageUrl      = params.get('page')     || '';
+  var apiBase      = params.get('api')      || '/api';
+
+  CryptoPay.init({ apiBase: apiBase });
+
+  /* ------------------------------------------------------------------
+   * Supported coins (populated from /api/supported-coins)
+   * ---------------------------------------------------------------- */
+  var COINS = [];
+  var selectedCoin = null;
+  var currentOrder = null;
+
+  function loadCoins() {
+    fetch(apiBase + '/supported-coins', { credentials: 'omit' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        COINS = (data.coins || []).filter(function (c) { return c.ticker; });
+        renderCoinSelector();
+      })
+      .catch(function () {
+        /* fallback: show a minimal set */
+        COINS = [
+          { ticker: 'BTC', name: 'Bitcoin' },
+          { ticker: 'ETH', name: 'Ethereum' },
+          { ticker: 'XMR', name: 'Monero' },
+        ];
+        renderCoinSelector();
+      });
+  }
+
+  function renderCoinSelector() {
+    var container = document.getElementById('cp-coin-selector');
+    container.innerHTML = '';
+    COINS.forEach(function (coin) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'crypto-pay-coin-btn';
+      btn.setAttribute('data-ticker', coin.ticker);
+      btn.setAttribute('aria-label', coin.name);
+      btn.innerHTML =
+        '<span style="font-size:1.4rem;">&#8383;</span>' +
+        '<span>' + escHtml(coin.ticker) + '</span>';
+      btn.addEventListener('click', function () { selectCoin(coin.ticker); });
+      container.appendChild(btn);
+    });
+  }
+
+  function selectCoin(ticker) {
+    selectedCoin = ticker;
+    document.querySelectorAll('.crypto-pay-coin-btn').forEach(function (b) {
+      b.classList.toggle('crypto-pay-selected', b.getAttribute('data-ticker') === ticker);
+    });
+
+    /* Load price preview */
+    if (fiatAmount > 0) {
+      CryptoPay.getPrice(ticker, fiatCurrency, fiatAmount).then(function (data) {
+        document.getElementById('cp-amount-box').style.display = '';
+        document.getElementById('cp-fiat-label').textContent =
+          fiatAmount.toFixed(2) + ' ' + fiatCurrency;
+        document.getElementById('cp-crypto-amount').textContent = data.crypto_amount || '—';
+        document.getElementById('cp-crypto-ticker').textContent = ticker;
+      });
+    }
+
+    document.getElementById('cp-pay-btn').style.display = '';
+  }
+
+  /* ------------------------------------------------------------------
+   * Payment flow
+   * ---------------------------------------------------------------- */
+  document.getElementById('cp-pay-btn').addEventListener('click', function () {
+    if (!selectedCoin) return;
+    var btn = document.getElementById('cp-pay-btn');
+    btn.disabled = true;
+    document.getElementById('cp-pay-btn-label').textContent = 'Creating order…';
+
+    CryptoPay.createOrder({
+      fiat_amount:      fiatAmount,
+      fiat_currency:    fiatCurrency.toLowerCase(),
+      crypto_currency:  selectedCoin,
+      product_name:     productName,
+      site_name:        siteName,
+      page_url:         pageUrl,
+    }).then(function (order) {
+      if (order.error) {
+        alert('Error: ' + order.error);
+        btn.disabled = false;
+        document.getElementById('cp-pay-btn-label').textContent = 'Proceed to Pay';
+        return;
+      }
+      currentOrder = order;
+      showOrder(order);
+    }).catch(function () {
+      alert('Network error — please try again.');
+      btn.disabled = false;
+      document.getElementById('cp-pay-btn-label').textContent = 'Proceed to Pay';
+    });
+  });
+
+  function showOrder(order) {
+    document.getElementById('cp-pay-btn').style.display = 'none';
+    document.getElementById('cp-coin-selector').style.display = 'none';
+
+    document.getElementById('cp-amount-box').style.display = '';
+    document.getElementById('cp-fiat-label').textContent =
+      order.fiat_amount.toFixed(2) + ' ' + (order.fiat_currency || '').toUpperCase();
+    document.getElementById('cp-crypto-amount').textContent = order.crypto_amount;
+    document.getElementById('cp-crypto-ticker').textContent = order.crypto_currency;
+
+    document.getElementById('cp-qr-img').src = CryptoPay.qrUrl(order.order_id);
+    document.getElementById('cp-qr-section').style.display = '';
+
+    document.getElementById('cp-address').textContent = order.wallet_address;
+    document.getElementById('cp-address-row').style.display = '';
+
+    document.getElementById('cp-status').style.display = '';
+    document.getElementById('cp-status').className =
+      'crypto-pay-status crypto-pay-status-pending';
+    document.getElementById('cp-status').textContent = 'Waiting for payment…';
+
+    document.getElementById('cp-tx-form').style.display = '';
+
+    if (order.expires_at) {
+      CountdownTimer.start('cp-timer', order.expires_at, function () {
+        document.getElementById('cp-status').className =
+          'crypto-pay-status crypto-pay-status-expired';
+        document.getElementById('cp-status').textContent = 'Payment window expired';
+        PaymentStatus.stop(order.order_id);
+      });
+    }
+
+    PaymentStatus.poll(order.order_id, CryptoPay._config.pollInterval, function (status) {
+      updateStatus(status, order.order_id);
+    });
+  }
+
+  function updateStatus(status, orderId) {
+    var el = document.getElementById('cp-status');
+    var map = {
+      pending:                ['crypto-pay-status-pending',   'Waiting for payment…'],
+      awaiting_confirmation:  ['crypto-pay-status-awaiting',  'Payment detected — awaiting confirmation…'],
+      completed:              ['crypto-pay-status-completed',  '✓ Payment confirmed! Thank you.'],
+      expired:                ['crypto-pay-status-expired',    'Payment window expired'],
+      cancelled:              ['crypto-pay-status-cancelled',  'Order cancelled'],
+    };
+    var info = map[status] || ['', status];
+    el.className = 'crypto-pay-status ' + info[0];
+    el.textContent = info[1];
+
+    if (status === 'completed' || status === 'expired' || status === 'cancelled') {
+      PaymentStatus.stop(orderId);
+      CountdownTimer.stop('cp-timer');
+      document.getElementById('cp-tx-form').style.display = 'none';
+    }
+  }
+
+  /* TX hash submission */
+  document.getElementById('cp-tx-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!currentOrder) return;
+    var txHash = document.getElementById('cp-tx-input').value.trim();
+    if (!txHash) return;
+    CryptoPay.submitTxHash(currentOrder.order_id, txHash).then(function (res) {
+      if (!res.error) updateStatus(res.status, currentOrder.order_id);
+    });
+  });
+
+  /* Copy address */
+  document.getElementById('cp-copy-btn').addEventListener('click', function () {
+    var addr = document.getElementById('cp-address').textContent;
+    var toast = document.getElementById('cp-copy-toast');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(addr).then(function () {
+        toast.textContent = 'Copied!';
+        setTimeout(function () { toast.textContent = ''; }, 2000);
+      });
+    }
+  });
+
+  /* Utilities */
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  /* Boot */
+  loadCoins();
+  PriceTicker.start(fiatCurrency.toLowerCase(), 30000);
+}());
+</script>
+</body>
+</html>

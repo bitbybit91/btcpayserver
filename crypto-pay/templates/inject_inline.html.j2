@@ -1,0 +1,92 @@
+{# inject_inline.html.j2 — Inline payment form template
+   Drop this snippet directly into any page section.
+   Variables:
+     api_base    : URL prefix for the crypto-pay API  (default "/api")
+     fiat_amount : Amount in fiat                     (required)
+     fiat        : Fiat currency code                 (default "USD")
+     product     : Product name                       (optional)
+     widget_url  : Full URL to payment-widget.html
+     css_url     : URL to payment.css
+     js_url      : URL to crypto-pay.js
+#}
+{% set api_base   = api_base   | default('/api') %}
+{% set fiat_amount = fiat_amount | default('0') %}
+{% set fiat       = fiat       | default('USD') %}
+{% set product    = product    | default('') %}
+{% set css_url    = css_url    | default('/crypto-pay/css/payment.css') %}
+{% set js_url     = js_url     | default('/crypto-pay/js/crypto-pay.js') %}
+
+<!-- crypto-pay: inject_inline.html.j2 -->
+<link rel="stylesheet" href="{{ css_url | e }}">
+<div class="crypto-pay-widget" id="cp-inline-widget"
+     data-cp-amount="{{ fiat_amount | e }}"
+     data-cp-fiat="{{ fiat | e }}"
+     data-cp-product="{{ product | e }}"
+     data-cp-api="{{ api_base | e }}">
+  <div class="crypto-pay-header">
+    <h2>&#8383; Pay with Cryptocurrency</h2>
+  </div>
+  <div class="crypto-pay-body">
+    <p style="text-align:center;color:var(--cp-text-muted,#6c757d)">
+      Loading payment widget…
+      <span class="crypto-pay-spinner" style="vertical-align:middle;margin-left:8px"></span>
+    </p>
+  </div>
+</div>
+<script src="{{ js_url | e }}"></script>
+<script>
+(function () {
+  'use strict';
+  var widget = document.getElementById('cp-inline-widget');
+  if (!widget || typeof CryptoPay === 'undefined') return;
+  CryptoPay.init({ apiBase: widget.dataset.cpApi });
+  /* Auto-open inline by creating an order immediately */
+  CryptoPay.createOrder({
+    fiat_amount:     parseFloat(widget.dataset.cpAmount),
+    fiat_currency:   widget.dataset.cpFiat.toLowerCase(),
+    crypto_currency: 'BTC',
+    product_name:    widget.dataset.cpProduct,
+    page_url:        window.location.href,
+  }).then(function (order) {
+    if (!order || order.error) return;
+    widget.innerHTML =
+      '<div class="crypto-pay-header"><h2>&#8383; Pay ' +
+      parseFloat(widget.dataset.cpAmount).toFixed(2) + ' ' +
+      widget.dataset.cpFiat.toUpperCase() + '</h2></div>' +
+      '<div class="crypto-pay-body">' +
+        '<div class="crypto-pay-amount-box">' +
+          '<div class="crypto-pay-amount-fiat">' +
+            parseFloat(widget.dataset.cpAmount).toFixed(2) + ' ' +
+            widget.dataset.cpFiat.toUpperCase() +
+          '</div>' +
+          '<div class="crypto-pay-amount-crypto">' + (order.crypto_amount || '') +
+            '<span class="crypto-pay-amount-ticker">' + (order.crypto_currency || '') + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="crypto-pay-qr-section">' +
+          '<img src="' + CryptoPay.qrUrl(order.order_id) + '" width="200" height="200" alt="QR">' +
+        '</div>' +
+        '<div class="crypto-pay-address-row">' +
+          '<span class="crypto-pay-address-text">' + order.wallet_address + '</span>' +
+        '</div>' +
+        '<div class="crypto-pay-timer" id="cp-inline-timer"></div>' +
+        '<div class="crypto-pay-status crypto-pay-status-pending" id="cp-inline-status">Waiting for payment…</div>' +
+      '</div>';
+    if (order.expires_at) CountdownTimer.start('cp-inline-timer', order.expires_at);
+    PaymentStatus.poll(order.order_id, 5000, function (status) {
+      var el = document.getElementById('cp-inline-status');
+      if (!el) return;
+      var map = {
+        completed: ['crypto-pay-status-completed', '&#10003; Payment confirmed!'],
+        expired:   ['crypto-pay-status-expired',   'Payment window expired'],
+        cancelled: ['crypto-pay-status-cancelled',  'Order cancelled'],
+      };
+      var info = map[status] || ['crypto-pay-status-pending', 'Waiting for payment…'];
+      el.className = 'crypto-pay-status ' + info[0];
+      el.innerHTML = info[1];
+      if (status === 'completed' || status === 'expired') PaymentStatus.stop(order.order_id);
+    });
+  });
+}());
+</script>
+<!-- /crypto-pay: inject_inline.html.j2 -->
